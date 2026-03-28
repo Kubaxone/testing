@@ -4,15 +4,98 @@
     <meta charset="UTF-8">
     <title>Loading..</title>
     <link rel="stylesheet" type="text/css" href="loading.css" />
+
     <style>
-        /* Quick fix for visibility */
-        .server_info { opacity: 0; transition: opacity 0.5s; }
-        .server_info.visible { opacity: 1; }
-        body.dark { background-color: #111; color: #eee; }
-        #background { position: relative; width: 100%; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        #logo { width: 200px; }
-        .walk { font-size: 24px; margin-top: 20px; }
-        .text div { margin: 5px 0; }
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            color: white;
+            background-size: cover;
+            background-position: center;
+        }
+
+        body.dark {
+            background-color: #111;
+            color: #eee;
+        }
+
+        #background {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+
+        #logo {
+            width: 220px;
+        }
+
+        .walk {
+            font-size: 24px;
+            margin-top: 20px;
+            animation: walkanim 1s infinite alternate;
+        }
+
+        @keyframes walkanim {
+            from { transform: translateX(-10px); }
+            to { transform: translateX(10px); }
+        }
+
+        .server_info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            gap: 15px;
+            opacity: 0;
+            transition: opacity 0.5s;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 10px;
+        }
+
+        .server_info.visible {
+            opacity: 1;
+        }
+
+        #mapimg {
+            width: 160px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 5px;
+        }
+
+        #loadingbox {
+            position: absolute;
+            bottom: 40px;
+            width: 60%;
+            left: 20%;
+            text-align: center;
+        }
+
+        #status {
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        #progressbar {
+            width: 100%;
+            height: 20px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        #progress {
+            width: 0%;
+            height: 100%;
+            background: #f2a100;
+            transition: width 0.3s;
+        }
     </style>
 </head>
 <body>
@@ -20,17 +103,22 @@
     <div id="background">
         <div id="container">
             <img id="logo" src="img/gmod_logo_brave.png" />
-            <div>
-                <div class="walk">:v</div>
-            </div>
+            <div class="walk">:v</div>
         </div>
 
         <div class="server_info">
-            <img id="mapimg" src="asset://mapimage/invalid_map" />
+            <img id="mapimg" src="img/gmod_logo_brave.png" />
             <div class="text">
                 <div id="serverName">initializing_menu</div>
-                <div id="serverMap">hello hello ported by kubaxone</div>
-                <div id="serverGamemode">hud</div>
+                <div id="serverMap">waiting for server...</div>
+                <div id="serverGamemode">unknown</div>
+            </div>
+        </div>
+
+        <div id="loadingbox">
+            <div id="status">Starting...</div>
+            <div id="progressbar">
+                <div id="progress"></div>
             </div>
         </div>
 
@@ -38,10 +126,12 @@
     </div>
 
     <script>
+        let totalFiles = 0;
+        let downloadedFiles = 0;
+
         document.addEventListener("DOMContentLoaded", function() {
             const today = new Date();
 
-            // Dark mode logic
             const isHalloween = (today.getMonth() === 9 && today.getDate() >= 15) || (today.getMonth() === 10 && today.getDate() <= 5);
             const darkMode = today.getHours() >= 19 || today.getHours() <= 7;
             const chromeVersionMatch = navigator.userAgent.match(/Chrome\/(\d+)/);
@@ -51,26 +141,60 @@
             if (isHalloween || (isSupportsSystemDarkMode ? systemDarkMode : darkMode)) {
                 document.body.classList.add("dark");
             }
-
-            // Redirect after 10s
-            // Remove the timeout if you don't want auto redirect
-            setTimeout(() => {
-                window.location.href = "/garrysmod/menu";
-            }, 10000);
         });
 
         function GameDetails(servername, serverurl, mapname, maxplayers, steamid, gamemode, volume, lang, gamemodeNice) {
             const mapImg = "img/gmod_logo_brave.png";
-            document.querySelector("#serverName").innerText = servername;
-            document.querySelector("#serverMap").innerText = mapname;
-            document.querySelector("#serverGamemode").innerText = gamemodeNice;
-            document.querySelector("#mapimg").setAttribute("src", mapImg);
+
+            document.getElementById("serverName").innerText = servername;
+            document.getElementById("serverMap").innerText = mapname;
+            document.getElementById("serverGamemode").innerText = gamemodeNice;
+
+            document.getElementById("mapimg").src = mapImg;
             document.body.style.backgroundImage = `url('${mapImg}')`;
+
             document.querySelector(".server_info").classList.add("visible");
         }
 
-        function DownloadingFile(file) { /* placeholder */ }
-        function SetStatusChanged(status) { /* placeholder */ }
+        function SetStatusChanged(status) {
+            document.getElementById("status").innerText = status;
+
+            if (status.toLowerCase().includes("sending client info") ||
+                status.toLowerCase().includes("finished") ||
+                status.toLowerCase().includes("done")) {
+
+                document.getElementById("status").innerText = "Finished! Joining server...";
+                document.getElementById("progress").style.width = "100%";
+
+                setTimeout(() => {
+                    window.location.href = "/garrysmod/menu";
+                }, 1000);
+            }
+        }
+
+        function SetFilesTotal(total) {
+            totalFiles = total;
+        }
+
+        function SetFilesNeeded(needed) {
+            totalFiles = needed;
+        }
+
+        function DownloadingFile(file) {
+            downloadedFiles++;
+            updateProgress();
+        }
+
+        function DownloadedFile(file) {
+            downloadedFiles++;
+            updateProgress();
+        }
+
+        function updateProgress() {
+            if (totalFiles === 0) return;
+            let percent = (downloadedFiles / totalFiles) * 100;
+            document.getElementById("progress").style.width = percent + "%";
+        }
     </script>
 
 </body>
