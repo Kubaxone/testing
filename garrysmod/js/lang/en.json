@@ -5,5 +5,14 @@
   "unfavorite_this_server": "Unfavorite This Server",
   "problems": "Problems",
   "game_not_owned": "Game Not Owned",
-  "game_not_installed": "Game Not Installed"
+  "game_not_installed": "Game Not Installed",
+  "motionsensor.showcolor": "Show Color",
+  "motionsensor.colorpos": "Color Position",
+  "motionsensor.colorsize": "Color Size",
+  "motionsensor.showcolor.red": "Red",
+  "motionsensor.showcolor.green": "Green",
+  "motionsensor.showcolor.blue": "Blue",
+  "motionsensor.colorsize.small": "Small",
+  "motionsensor.colorsize.medium": "Medium",
+  "motionsensor.colorsize.large": "Large"
 }
