@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Minecraft Server Status</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+        :root {
+            --dirt: #866043;
+            --grass-top: #5d9c3a;
+            --stone: #7f7f7f;
+            --stone-dark: #5a5a5a;
+            --stone-light: #9b9b9b;
+            --wood: #9f7f4f;
+            --wood-dark: #7a6034;
+            --bg: #1a1a2e;
+            --panel-bg: #3c3c3c;
+            --panel-border: #1a1a1a;
+            --panel-highlight: #5a5a5a;
+            --green: #55ff55;
+            --red: #ff5555;
+            --yellow: #ffff55;
+            --white: #f0f0f0;
+            --gray: #aaaaaa;
+            --dark-gray: #555555;
+            --shadow: #1a1a1a;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; image-rendering: pixelated; }
+
+        body {
+            background-color: #1c1c1c;
+            background-image:
+                repeating-linear-gradient(
+                    0deg,
+                    transparent,
+                    transparent 15px,
+                    rgba(0,0,0,0.15) 15px,
+                    rgba(0,0,0,0.15) 16px
+                ),
+                repeating-linear-gradient(
+                    90deg,
+                    transparent,
+                    transparent 15px,
+                    rgba(0,0,0,0.15) 15px,
+                    rgba(0,0,0,0.15) 16px
+                );
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 40px 20px;
+            font-family: 'VT323', monospace;
+            color: var(--white);
+        }
+
+        /* Minecraft-style panel mixin */
+        .mc-panel {
+            background: var(--panel-bg);
+            border: 3px solid;
+            border-color: var(--panel-highlight) var(--panel-border) var(--panel-border) var(--panel-highlight);
+            box-shadow: inset 2px 2px 0 var(--panel-highlight), inset -2px -2px 0 var(--shadow);
+            padding: 16px;
+        }
+
+        /* Title */
+        .mc-title {
+            font-size: 52px;
+            letter-spacing: 3px;
+            text-align: center;
+            margin-bottom: 8px;
+            text-shadow: 3px 3px 0 #2a4a18, -1px -1px 0 #2a4a18;
+            color: #55ff55;
+            line-height: 1;
+        }
+        .mc-subtitle {
+            font-size: 22px;
+            color: var(--gray);
+            text-align: center;
+            margin-bottom: 30px;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        /* Main container */
+        .container {
+            width: 100%;
+            max-width: 560px;
+        }
+
+        /* Input row */
+        .input-row {
+            display: flex;
+            gap: 0;
+            margin-bottom: 6px;
+        }
+
+        .mc-input {
+            flex: 1;
+            background: #000;
+            border: 3px solid;
+            border-color: var(--panel-border) var(--panel-highlight) var(--panel-highlight) var(--panel-border);
+            color: white;
+            font-family: 'VT323', monospace;
+            font-size: 22px;
+            padding: 10px 14px;
+            outline: none;
+            letter-spacing: 1px;
+        }
+        .mc-input::placeholder { color: #555; }
+        .mc-input:focus { background: #111; }
+
+        .mc-btn {
+            background: #5aac27;
+            border: 3px solid;
+            border-color: #8dcc52 #2a5c10 #2a5c10 #8dcc52;
+            color: white;
+            font-family: 'VT323', monospace;
+            font-size: 22px;
+            padding: 10px 20px;
+            cursor: pointer;
+            letter-spacing: 1px;
+            text-shadow: 2px 2px 0 #1a3a08;
+            transition: filter 0.05s;
+            user-select: none;
+            white-space: nowrap;
+        }
+        .mc-btn:hover {
+            filter: brightness(1.15);
+        }
+        .mc-btn:active {
+            border-color: #2a5c10 #8dcc52 #8dcc52 #2a5c10;
+            filter: brightness(0.9);
+        }
+
+        /* Server entry - like a multiplayer list row */
+        .server-entry {
+            display: none;
+            margin-top: 12px;
+        }
+        .server-entry.visible { display: block; }
+
+        .server-row {
+            background: #1e1e1e;
+            border: 3px solid;
+            border-color: var(--panel-highlight) var(--panel-border) var(--panel-border) var(--panel-highlight);
+            display: flex;
+            gap: 0;
+            min-height: 80px;
+            position: relative;
+            overflow: hidden;
+        }
+        .server-row:hover { background: #2a2a2a; cursor: default; }
+
+        .server-icon-wrap {
+            width: 72px;
+            min-width: 72px;
+            border-right: 3px solid var(--panel-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #111;
+            padding: 4px;
+        }
+        .server-icon-wrap img {
+            width: 64px;
+            height: 64px;
+            image-rendering: pixelated;
+        }
+        .server-icon-wrap .default-icon {
+            width: 64px;
+            height: 64px;
+            background:
+                linear-gradient(135deg, #5d9c3a 0% 50%, #866043 50% 100%);
+            border: 2px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+        }
+
+        .server-info {
+            flex: 1;
+            padding: 8px 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 3px;
+            min-width: 0;
+        }
+        .server-name {
+            font-size: 26px;
+            color: #fff;
+            text-shadow: 1px 1px 0 #000;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .server-motd {
+            font-size: 20px;
+            color: var(--gray);
+            text-shadow: 1px 1px 0 #000;
+            line-height: 1.1;
+            word-break: break-word;
+        }
+        .server-version {
+            font-size: 18px;
+            color: #aaa;
+        }
+
+        .server-meta {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            justify-content: center;
+            padding: 8px 12px;
+            gap: 4px;
+            min-width: 130px;
+            border-left: 3px solid var(--panel-border);
+        }
+
+        /* Ping bars like MC */
+        .ping-bars {
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            height: 18px;
+        }
+        .bar {
+            width: 5px;
+            background: var(--green);
+        }
+        .bar.empty { background: #333; }
+        .bar:nth-child(1) { height: 4px; }
+        .bar:nth-child(2) { height: 7px; }
+        .bar:nth-child(3) { height: 10px; }
+        .bar:nth-child(4) { height: 13px; }
+        .bar:nth-child(5) { height: 18px; }
+
+        .player-count {
+            font-size: 20px;
+            color: var(--gray);
+            text-shadow: 1px 1px 0 #000;
+        }
+        .player-count .online { color: #fff; }
+
+        /* Offline state */
+        .server-offline .server-name { color: #888; }
+        .server-offline .ping-bars .bar { background: #333; }
+        .server-offline .ping-bars .bar:nth-child(1) { background: var(--red); }
+
+        /* Status badge */
+        .status-label {
+            font-size: 18px;
+            padding: 1px 8px;
+            border: 2px solid;
+        }
+        .status-label.online {
+            color: var(--green);
+            border-color: var(--green);
+            text-shadow: 1px 1px 0 #000;
+        }
+        .status-label.offline {
+            color: var(--red);
+            border-color: var(--red);
+            text-shadow: 1px 1px 0 #000;
+        }
+
+        /* Loading animation */
+        .mc-loading {
+            text-align: center;
+            padding: 20px;
+            font-size: 26px;
+            color: var(--gray);
+            letter-spacing: 2px;
+        }
+        .dots::after {
+            content: '';
+            animation: dots 1.2s steps(4, end) infinite;
+        }
+        @keyframes dots {
+            0%   { content: ''; }
+            25%  { content: '.'; }
+            50%  { content: '..'; }
+            75%  { content: '...'; }
+            100% { content: ''; }
+        }
+
+        /* Extra info panel */
+        .extra-info {
+            margin-top: 6px;
+            display: none;
+        }
+        .extra-info.visible { display: block; }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3px;
+        }
+        .info-cell {
+            background: #1e1e1e;
+            border: 2px solid var(--panel-border);
+            padding: 6px 10px;
+            font-size: 19px;
+        }
+        .info-cell .label { color: var(--gray); font-size: 17px; }
+        .info-cell .value { color: #fff; }
+
+        .divider {
+            height: 3px;
+            background: linear-gradient(to right, var(--panel-border), var(--panel-highlight), var(--panel-border));
+            margin: 10px 0;
+        }
+
+        /* Error */
+        .mc-error {
+            text-align: center;
+            color: var(--red);
+            font-size: 22px;
+            padding: 16px;
+            border: 2px solid var(--red);
+            margin-top: 12px;
+            background: #1e0000;
+        }
+
+        /* MOTD color codes mapping */
+        .motd-white { color: #f0f0f0; }
+        .motd-yellow { color: #ffff55; }
+        .motd-gold { color: #ffaa00; }
+        .motd-red { color: #ff5555; }
+        .motd-green { color: #55ff55; }
+        .motd-aqua { color: #55ffff; }
+        .motd-blue { color: #5555ff; }
+        .motd-gray { color: #aaaaaa; }
+        .motd-bold { font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="mc-title">⛏ SERVER STATUS</div>
+    <div class="mc-subtitle">Multiplayer › Direct Connection</div>
+
+    <div class="mc-panel">
+        <div class="input-row">
+            <input class="mc-input" type="text" id="ip" placeholder="Server Address...">
+            <button class="mc-btn" onclick="getServer()">▶ JOIN</button>
+        </div>
+        <div style="font-size:17px; color:#666; letter-spacing:1px;">e.g. hypixel.net · play.cubecraft.net</div>
+    </div>
+
+    <div id="loading" class="mc-loading" style="display:none;">Pinging server<span class="dots"></span></div>
+    <div id="error-box" class="mc-error" style="display:none;"></div>
+
+    <div id="server-entry" class="server-entry">
+        <div id="server-row" class="server-row">
+            <div class="server-icon-wrap" id="icon-wrap">
+                <div class="default-icon">🌍</div>
+            </div>
+            <div class="server-info">
+                <div class="server-name" id="s-ip"></div>
+                <div class="server-motd" id="s-motd"></div>
+                <div class="server-version" id="s-version"></div>
+            </div>
+            <div class="server-meta">
+                <div class="ping-bars" id="ping-bars">
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                </div>
+                <div class="player-count" id="player-count"></div>
+                <div id="status-label" class="status-label"></div>
+            </div>
+        </div>
+
+        <div id="extra-info" class="extra-info">
+            <div class="divider"></div>
+            <div class="info-grid" id="info-grid"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function getServer() {
+        const ip = document.getElementById("ip").value.trim();
+        if (!ip) return;
+
+        const loading = document.getElementById("loading");
+        const errorBox = document.getElementById("error-box");
+        const entry = document.getElementById("server-entry");
+        const extra = document.getElementById("extra-info");
+
+        // Reset
+        loading.style.display = "block";
+        errorBox.style.display = "none";
+        entry.classList.remove("visible");
+        extra.classList.remove("visible");
+
+        try {
+            const res = await fetch("https://api.mcsrvstat.us/2/" + ip);
+            const data = await res.json();
+            loading.style.display = "none";
+
+            if (data.online) {
+                renderOnline(ip, data);
+            } else {
+                renderOffline(ip);
+            }
+        } catch (err) {
+            loading.style.display = "none";
+            errorBox.style.display = "block";
+            errorBox.textContent = "✗ Could not reach API. Check your connection.";
+        }
+    }
+
+    function renderOnline(ip, data) {
+        const row = document.getElementById("server-row");
+        row.className = "server-row";
+
+        // Icon
+        const iconWrap = document.getElementById("icon-wrap");
+        if (data.icon) {
+            iconWrap.innerHTML = `<img src="${data.icon}" width="64" height="64">`;
+        } else {
+            iconWrap.innerHTML = `<div class="default-icon">🌍</div>`;
+        }
+
+        // IP / Name
+        document.getElementById("s-ip").textContent = ip;
+
+        // MOTD
+        const motdEl = document.getElementById("s-motd");
+        if (data.motd && data.motd.clean) {
+            motdEl.textContent = data.motd.clean.join(" · ");
+        } else {
+            motdEl.textContent = "A Minecraft Server";
+        }
+
+        // Version
+        document.getElementById("s-version").textContent = data.version || "";
+
+        // Ping bars (fake — all lit as online)
+        const bars = document.getElementById("ping-bars").children;
+        for (let b of bars) {
+            b.classList.remove("empty");
+            b.style.background = "var(--green)";
+        }
+
+        // Players
+        const online = data.players?.online ?? 0;
+        const max = data.players?.max ?? 0;
+        document.getElementById("player-count").innerHTML =
+            `<span class="online">${online}</span>/${max}`;
+
+        // Status
+        const lbl = document.getElementById("status-label");
+        lbl.textContent = "ONLINE";
+        lbl.className = "status-label online";
+
+        // Extra info
+        const grid = document.getElementById("info-grid");
+        const entries = [
+            ["Software", data.software || "Vanilla"],
+            ["Online Mode", data.online_mode === false ? "Cracked" : "Premium"],
+            ["Players Online", online],
+            ["Max Players", max],
+        ];
+        grid.innerHTML = entries.map(([label, value]) => `
+            <div class="info-cell">
+                <div class="label">${label}</div>
+                <div class="value">${value}</div>
+            </div>
+        `).join("");
+
+        document.getElementById("server-entry").classList.add("visible");
+        document.getElementById("extra-info").classList.add("visible");
+    }
+
+    function renderOffline(ip) {
+        const row = document.getElementById("server-row");
+        row.className = "server-row server-offline";
+
+        document.getElementById("icon-wrap").innerHTML = `<div class="default-icon" style="filter:grayscale(1) brightness(0.5)">🌍</div>`;
+        document.getElementById("s-ip").textContent = ip;
+        document.getElementById("s-motd").textContent = "Server not reachable";
+        document.getElementById("s-version").textContent = "";
+
+        const bars = document.getElementById("ping-bars").children;
+        for (let i = 0; i < bars.length; i++) {
+            bars[i].style.background = i === 0 ? "var(--red)" : "#333";
+        }
+
+        document.getElementById("player-count").innerHTML = "";
+        const lbl = document.getElementById("status-label");
+        lbl.textContent = "OFFLINE";
+        lbl.className = "status-label offline";
+
+        document.getElementById("server-entry").classList.add("visible");
+    }
+
+    document.getElementById("ip").addEventListener("keydown", e => {
+        if (e.key === "Enter") getServer();
+    });
+</script>
+</body>
+</html>
