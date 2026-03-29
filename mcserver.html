@@ -402,12 +402,22 @@
         extra.classList.remove("visible");
 
         try {
-            const res = await fetch("https://api.mcsrvstat.us/2/" + ip);
+            const res = await fetch("https://api.mcstatus.io/v2/status/java/" + ip);
             const data = await res.json();
             loading.style.display = "none";
 
             if (data.online) {
-                renderOnline(ip, data);
+                // normalize to same shape as before
+                const normalized = {
+                    online: true,
+                    version: data.version?.name_clean || data.version?.name || "",
+                    players: { online: data.players?.online ?? 0, max: data.players?.max ?? 0 },
+                    motd: { clean: [data.motd?.clean || "A Minecraft Server"] },
+                    software: data.software || null,
+                    online_mode: data.online_mode,
+                    icon: data.icon || null,
+                };
+                renderOnline(ip, normalized);
             } else {
                 renderOffline(ip);
             }
