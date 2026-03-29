@@ -1,0 +1,6 @@
+0 = 2
+
+  if 0 == 2 then
+   stop()
+  else
+   console.log("true")
